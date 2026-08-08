@@ -1,0 +1,56 @@
+from enum import Enum
+
+
+class EmploymentType(str, Enum):
+    FULL_TIME = "FULL_TIME"
+    PART_TIME = "PART_TIME"
+    CONTRACT = "CONTRACT"
+    INTERNSHIP = "INTERNSHIP"
+
+
+class CampaignStatus(str, Enum):
+    SETUP = "SETUP"
+    JD_ANALYZED = "JD_ANALYZED"
+    PREFERENCES_SET = "PREFERENCES_SET"
+    PUBLISHED = "PUBLISHED"
+    MONITORING = "MONITORING"
+    EVALUATING = "EVALUATING"
+    SHORTLISTED = "SHORTLISTED"
+    CLOSED = "CLOSED"
+
+
+class PlatformType(str, Enum):
+    LINKEDIN = "LINKEDIN"
+    INDEED = "INDEED"
+    COMPANY_PORTAL = "COMPANY_PORTAL"
+    GENERIC_WEB = "GENERIC_WEB"
+
+
+class ApplicationStatus(str, Enum):
+    APPLIED = "APPLIED"
+    PARSED = "PARSED"
+    EVALUATED = "EVALUATED"
+    SHORTLISTED = "SHORTLISTED"
+    REJECTED = "REJECTED"
+
+
+class ScreeningStrategy(str, Enum):
+    HYBRID = "HYBRID"
+    SEMANTIC = "SEMANTIC"
+    WEIGHTED = "WEIGHTED"
+    KEYWORD = "KEYWORD"
+    EVIDENCE = "EVIDENCE"
+
+
+class ActionProposed(str, Enum):
+    NONE = "NONE"
+    REPOST_JOB = "REPOST_JOB"
+    REFRESH_JOB = "REFRESH_JOB"
+    REVISE_REQUIREMENTS = "REVISE_REQUIREMENTS"
+
+
+class ActionStatus(str, Enum):
+    EXECUTED = "EXECUTED"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    REJECTED_BY_GUARDRAIL = "REJECTED_BY_GUARDRAIL"
+    DECLINED_BY_RECRUITER = "DECLINED_BY_RECRUITER"

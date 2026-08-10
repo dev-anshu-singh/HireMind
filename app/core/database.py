@@ -4,15 +4,15 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# --- Synchronous Engine (Used by Alembic migrations & initial table creation) ---
-sync_connect_args = {}
+# --- Synchronous Engine (Used by Alembic migrations & CLI scripts) ---
+connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
-    sync_connect_args["check_same_thread"] = False
+    connect_args["check_same_thread"] = False
 
 engine = create_engine(
     settings.DATABASE_URL,
     echo=(settings.ENVIRONMENT == "development"),
-    connect_args=sync_connect_args,
+    connect_args=connect_args,
 )
 
 
@@ -28,7 +28,7 @@ def get_session() -> Generator[Session, None, None]:
         yield session
 
 
-# --- Asynchronous Engine (Used by FastAPI async routes for high performance) ---
+# --- Asynchronous Engine (Used by FastAPI async routes) ---
 async_connect_args = {}
 if settings.async_database_url.startswith("sqlite"):
     async_connect_args["check_same_thread"] = False

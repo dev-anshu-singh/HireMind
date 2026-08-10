@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.models.enums import CampaignStatus
 from app.schemas.campaign import CampaignCreate, CampaignRead, CampaignStatusUpdate
+from app.schemas.hiring_profile import HiringProfileRead
 from app.services.campaign_service import CampaignService
+from app.services.jd_parser_service import JDParserService
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -58,3 +60,29 @@ async def update_campaign_status(
     Validates state machine transition rules before updating database.
     """
     return await CampaignService.update_status(db, campaign_id, payload.target_status)
+
+
+# --- JD Parser Endpoints ---
+
+@router.post("/{campaign_id}/analyze-jd", response_model=HiringProfileRead, status_code=status.HTTP_200_OK)
+async def analyze_job_description(
+    campaign_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Analyze campaign's raw Job Description using Google Gemini 2.5 Flash.
+    Extracts structured technical skills, experience, responsibilities, and soft skills.
+    Saves the profile to the database and advances status to `JD_ANALYZED`.
+    """
+    return await JDParserService.analyze_and_save_jd(db, campaign_id)
+
+
+@router.get("/{campaign_id}/hiring-profile", response_model=HiringProfileRead, status_code=status.HTTP_200_OK)
+async def get_hiring_profile(
+    campaign_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Retrieve the analyzed structured Hiring Profile for a campaign.
+    """
+    return await JDParserService.get_hiring_profile(db, campaign_id)

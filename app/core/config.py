@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev_secret_key_change_in_production"
     ENVIRONMENT: str = "development"
     
-    # LLM Credentials
+    # LLM Configuration
+    DEFAULT_MODEL_NAME: str = "gemini-2.5-flash"
     GOOGLE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     LLAMA_CLOUD_API_KEY: str = ""
@@ -20,7 +21,7 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         """
         Derive async database URL for SQLModel/SQLAlchemy async engine.
-        Converts postgresql:// to postgresql+asyncpg:// and cleans query parameters.
+        Converts postgresql:// to postgresql+asyncpg:// and maps libpq sslmode parameter.
         """
         url = self.DATABASE_URL
         if url.startswith("sqlite:///"):
@@ -30,24 +31,22 @@ class Settings(BaseSettings):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-        
-        # Clean query parameters for asyncpg compatibility
+
+        # Convert libpq parameters (sslmode, channel_binding) for asyncpg driver compatibility
         if "?" in url:
             base_url, query_params = url.split("?", 1)
             cleaned_params = []
             for param in query_params.split("&"):
                 if param.startswith("channel_binding="):
-                    continue  # Ignore libpq channel_binding param for asyncpg
+                    continue
                 elif param.startswith("sslmode="):
                     val = param.split("=", 1)[1]
-                    # Map sslmode values to asyncpg ssl values
                     if val in ["require", "verify-ca", "verify-full", "prefer"]:
                         cleaned_params.append("ssl=require")
                     else:
                         cleaned_params.append(f"ssl={val}")
                 else:
                     cleaned_params.append(param)
-            
             url = f"{base_url}?{'&'.join(cleaned_params)}" if cleaned_params else base_url
 
         return url

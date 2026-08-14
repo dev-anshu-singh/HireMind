@@ -1,34 +1,45 @@
-"""
-Centralized LLM Provider Module.
-
-Initializes and exposes Google Gemini Chat models using configuration
-from app.core.config. Centralizing LLM creation ensures all agents
-share uniform initialization logic and credential management.
-"""
-
 from typing import Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from app.core.config import settings
 
 
 def get_llm(
-    model_name: Optional[str] = None, 
-    temperature: float = 0.1
+    model_name: Optional[str] = None,
+    temperature: float = 0.2,
 ) -> ChatGoogleGenerativeAI:
     """
-    Factory function to get an initialized Google Gemini LLM instance.
+    Centralized factory function returning a configured ChatGoogleGenerativeAI LLM instance.
 
     Args:
-        model_name: Override model name (defaults to settings.DEFAULT_MODEL_NAME).
-        temperature: Model sampling temperature (default 0.1 for factual outputs).
+        model_name: Optional model override (e.g. 'gemini-3.6-flash').
+                    Defaults to settings.DEFAULT_MODEL_NAME.
+        temperature: Sampling temperature for creativity vs precision. Default is 0.2.
 
     Returns:
-        ChatGoogleGenerativeAI instance.
+        ChatGoogleGenerativeAI: Configured LangChain chat model instance.
     """
-    target_model = model_name or settings.DEFAULT_MODEL_NAME
+    selected_model = model_name or settings.DEFAULT_MODEL_NAME
 
     return ChatGoogleGenerativeAI(
-        model=target_model,
+        model=selected_model,
         google_api_key=settings.GOOGLE_API_KEY,
         temperature=temperature,
+    )
+
+
+def get_embeddings(
+    model_name: str = "models/text-embedding-004",
+) -> GoogleGenerativeAIEmbeddings:
+    """
+    Centralized factory function returning GoogleGenerativeAIEmbeddings for vector similarity.
+
+    Args:
+        model_name: Embedding model name. Defaults to 'models/text-embedding-004'.
+
+    Returns:
+        GoogleGenerativeAIEmbeddings: Configured LangChain embedding model instance.
+    """
+    return GoogleGenerativeAIEmbeddings(
+        model=model_name,
+        google_api_key=settings.GOOGLE_API_KEY,
     )

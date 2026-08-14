@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     
     # LLM Configuration
-    DEFAULT_MODEL_NAME: str = "gemini-2.5-flash"
+    DEFAULT_MODEL_NAME: str = "gemini-3.6-flash"
     GOOGLE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     LLAMA_CLOUD_API_KEY: str = ""

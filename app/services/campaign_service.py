@@ -57,7 +57,7 @@ class CampaignService:
         Creates a new hiring campaign in SETUP status.
         Calculates application deadline based on duration_days.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         deadline = now + timedelta(days=payload.duration_days)
 
         # Convert Pydantic input schema into SQLModel database entity
@@ -92,8 +92,8 @@ class CampaignService:
         Fetches a campaign by UUID. Raises 404 Not Found if missing.
         """
         statement = select(Campaign).where(Campaign.id == campaign_id)
-        result = await db.exec(statement)
-        campaign = result.first()
+        result = await db.execute(statement)
+        campaign = result.scalars().first()
 
         if not campaign:
             raise HTTPException(
@@ -114,8 +114,8 @@ class CampaignService:
             statement = statement.where(Campaign.status == status_filter)
         
         statement = statement.offset(skip).limit(limit).order_by(Campaign.created_at.desc())
-        result = await db.exec(statement)
-        return result.all()
+        result = await db.execute(statement)
+        return result.scalars().all()
 
     @staticmethod
     async def update_status(
@@ -130,7 +130,7 @@ class CampaignService:
         validate_status_transition(campaign.status, target_status)
         
         campaign.status = target_status
-        campaign.updated_at = datetime.now(timezone.utc)
+        campaign.updated_at = datetime.utcnow()
         
         db.add(campaign)
         await db.commit()

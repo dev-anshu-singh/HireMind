@@ -41,8 +41,8 @@ class Campaign(SQLModel, table=True):
     auto_close_on_deadline: bool = Field(default=True, nullable=False)
     auto_approve_reposts: bool = Field(default=False, nullable=False)
     
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     hiring_profile: Optional["HiringProfile"] = Relationship(

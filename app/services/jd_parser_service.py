@@ -24,8 +24,8 @@ class JDParserService:
 
         # 2. Check existing profile (if already analyzed, overwrite or return)
         statement = select(HiringProfile).where(HiringProfile.campaign_id == campaign_id)
-        result = await db.exec(statement)
-        existing_profile = result.first()
+        result = await db.execute(statement)
+        existing_profile = result.scalars().first()
 
         # 3. Call Gemini agent to extract structured JSON from raw JD
         parsed_data = await parse_job_description(campaign.raw_job_description)
@@ -33,7 +33,7 @@ class JDParserService:
         # Convert list of ParsedSkill models into dictionaries for JSON column storage
         tech_skills_list = [skill.model_dump() for skill in parsed_data.technical_skills]
 
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
 
         if existing_profile:
             # Update existing profile row
@@ -76,8 +76,8 @@ class JDParserService:
         Fetches the parsed HiringProfile for a campaign. Raises 404 if missing.
         """
         statement = select(HiringProfile).where(HiringProfile.campaign_id == campaign_id)
-        result = await db.exec(statement)
-        profile = result.first()
+        result = await db.execute(statement)
+        profile = result.scalars().first()
 
         if not profile:
             raise HTTPException(

@@ -17,24 +17,24 @@ from app.services.candidate_service import CandidateService
 from app.agents.evaluator.agent import (
     compute_technical_depth_score,
     compute_soft_skills_similarity,
-    evaluate_experience_with_llm,
+    evaluate_experience_against_requirements,
+    evaluate_projects_and_brand,
 )
 
 
 class EvaluationService:
-    """Service handling candidate evaluation, 3-pillar scoring, vector embeddings, and auto-shortlisting."""
+    """Service handling 4-pillar candidate evaluation, vector embeddings, fresher weight redistribution, and auto-shortlisting."""
 
     @staticmethod
     async def evaluate_candidate(
         db: AsyncSession, candidate_id: uuid.UUID
     ) -> CandidateEvaluation:
         """
-        Evaluates a single candidate across the 3 pillars:
+        Evaluates a single candidate across the 4 pillars:
         1. Tech Depth: Deterministic Python skill mapping.
-        2. Soft Skills: Vector Embeddings Cosine Similarity.
-        3. Experience: Rule-constrained Gemini 3.6 Flash agent.
-
-        Saves score breakdown to candidate_evaluations table & advances status to EVALUATED.
+        2. Experience Fit: Scored against structured experience requirements.
+        3. Projects & College Brand: College tier, live code links, awards.
+        4. Soft Skills: Vector Embeddings Cosine Similarity.
         """
         # 1. Fetch Candidate & CandidateProfile
         candidate = await CandidateService.get_candidate_by_id(db, candidate_id)
@@ -56,75 +56,92 @@ class EvaluationService:
         try:
             recruiter_pref = await PreferenceService.get_preferences(db, candidate.campaign_id)
             skill_priorities = recruiter_pref.skill_priorities
-            weights = recruiter_pref.evaluation_weights
         except HTTPException:
             skill_priorities = {}
-            weights = {"technical_depth": 0.50, "experience": 0.30, "soft_skills": 0.20}
-
-        # Extract weight ratios
-        w_tech = weights.get("technical_depth", 0.50)
-        w_exp = weights.get("experience", 0.30)
-        w_soft = weights.get("soft_skills", 0.20)
 
         candidate_skills = profile.parsed_skills or []
+        is_fresher_role = (hiring_profile.min_experience_years == 0)
 
-        # 3. Pillar 1: Technical Depth Score (Deterministic Python Mapping)
+        # 3. Dynamic Weight Assignment (Fresher vs Experienced Role)
+        if is_fresher_role:
+            w_tech = 0.40
+            w_exp = 0.00
+            w_portfolio = 0.45
+            w_soft = 0.15
+        else:
+            w_tech = 0.40
+            w_exp = 0.35
+            w_portfolio = 0.15
+            w_soft = 0.10
+
+        # 4. Pillar 1: Technical Depth Score (Deterministic Python Mapping)
         tech_score, tech_breakdown = compute_technical_depth_score(
             candidate_skills=candidate_skills,
             recruiter_skill_priorities=skill_priorities,
         )
 
-        # 4. Pillar 2: Soft Skills & Culture Score (Vector Embedding Cosine Similarity)
-        soft_skills_score = await compute_soft_skills_similarity(
-            candidate_skills=candidate_skills,
-            job_soft_skills=hiring_profile.soft_skills or [],
-        )
-
-        # 5. Pillar 3: Experience Fit Score (Rule-Constrained Gemini Agent)
-        exp_eval_output = await evaluate_experience_with_llm(
+        # 5. Pillar 2: Experience Fit Score (Evaluated against structured experience_requirements)
+        exp_eval_output = await evaluate_experience_against_requirements(
             job_title=campaign.job_title,
-            required_min_exp=hiring_profile.min_experience_years or 0.0,
+            experience_requirements=getattr(hiring_profile, "experience_requirements", []) or [],
             candidate_exp_years=float(len(profile.parsed_work_experience or []) * 1.5),
             candidate_experience=profile.parsed_work_experience or [],
             candidate_projects=profile.parsed_projects or [],
         )
         exp_score = exp_eval_output.score
 
-        # 6. Weighted Composite Score Calculation
+        # 6. Pillar 3: Projects, Achievements & College Brand Score
+        projects_brand_output = await evaluate_projects_and_brand(
+            candidate_education=profile.parsed_education or [],
+            candidate_projects=profile.parsed_projects or [],
+            candidate_github_url=candidate.github_url,
+        )
+        portfolio_score = projects_brand_output.score
+
+        # 7. Pillar 4: Soft Skills Score (Vector Embedding Cosine Similarity)
+        soft_skills_score = await compute_soft_skills_similarity(
+            candidate_skills=candidate_skills,
+            job_soft_skills=hiring_profile.soft_skills or [],
+        )
+
+        # 8. Weighted Composite Score Calculation
         overall_score = round(
-            (tech_score * w_tech) + (exp_score * w_exp) + (soft_skills_score * w_soft),
+            (tech_score * w_tech) + (exp_score * w_exp) + (portfolio_score * w_portfolio) + (soft_skills_score * w_soft),
             2
         )
 
-        # 7. Generate Match Reasons & Risk Factors
+        # 9. Generate Match Reasons & Risk Factors
         match_reasons = []
         risk_factors = []
 
         if tech_breakdown["matched_skills"]:
             match_reasons.append(f"Matched core skills: {', '.join(tech_breakdown['matched_skills'][:4])}.")
-        if exp_score >= 70.0:
+        if projects_brand_output.key_highlights:
+            match_reasons.extend(projects_brand_output.key_highlights)
+        if exp_score >= 70.0 and not is_fresher_role:
             match_reasons.append(f"Strong experience alignment for '{campaign.job_title}'.")
         if soft_skills_score >= 75.0:
             match_reasons.append("High semantic alignment with target soft skills and culture.")
 
         if tech_breakdown["missing_must_have"]:
             risk_factors.append(f"Missing required MUST_HAVE skills: {', '.join(tech_breakdown['missing_must_have'])}.")
-        if exp_score < 60.0:
-            risk_factors.append(exp_eval_output.justification)
+        if exp_score < 60.0 and not is_fresher_role:
+            risk_factors.append(exp_eval_output.summary)
 
         now = datetime.utcnow()
 
-        # 8. Create or Update CandidateEvaluation DB Record
+        # 10. Create or Update CandidateEvaluation DB Record
         stmt = select(CandidateEvaluation).where(CandidateEvaluation.candidate_id == candidate_id)
         res = await db.execute(stmt)
         existing_eval = res.scalars().first()
 
-        summary_reasoning = f"Overall score {overall_score}/100. {exp_eval_output.justification}"
+        summary_reasoning = f"Overall score {overall_score}/100. {exp_eval_output.summary}"
 
         if existing_eval:
             existing_eval.overall_match_score = overall_score
             existing_eval.skill_match_score = tech_score
             existing_eval.experience_score = exp_score
+            existing_eval.portfolio_score = portfolio_score
             existing_eval.semantic_score = soft_skills_score
             existing_eval.key_strengths = match_reasons
             existing_eval.potential_concerns = risk_factors
@@ -140,8 +157,8 @@ class EvaluationService:
                 overall_match_score=overall_score,
                 skill_match_score=tech_score,
                 experience_score=exp_score,
+                portfolio_score=portfolio_score,
                 semantic_score=soft_skills_score,
-                portfolio_score=0.0,
                 is_shortlisted=False,
                 key_strengths=match_reasons,
                 potential_concerns=risk_factors,
@@ -150,7 +167,7 @@ class EvaluationService:
             )
             db.add(eval_record)
 
-        # 9. Update Candidate status from PARSED to EVALUATED (unless REJECTED by knockout)
+        # 11. Update Candidate status from PARSED to EVALUATED (unless REJECTED by knockout)
         if candidate.application_status == ApplicationStatus.PARSED:
             candidate.application_status = ApplicationStatus.EVALUATED
             db.add(candidate)

@@ -16,7 +16,7 @@ class JDParserService:
     @staticmethod
     async def analyze_and_save_jd(db: AsyncSession, campaign_id: uuid.UUID) -> HiringProfile:
         """
-        Parses raw JD text using Gemini 2.5 Flash, saves HiringProfile to database,
+        Parses raw JD text using Gemini, saves HiringProfile to database,
         and transitions campaign status to JD_ANALYZED.
         """
         # 1. Fetch target campaign
@@ -30,8 +30,9 @@ class JDParserService:
         # 3. Call Gemini agent to extract structured JSON from raw JD
         parsed_data = await parse_job_description(campaign.raw_job_description)
 
-        # Convert list of ParsedSkill models into dictionaries for JSON column storage
+        # Convert list of Pydantic models into dictionaries for JSON column storage
         tech_skills_list = [skill.model_dump() for skill in parsed_data.technical_skills]
+        exp_reqs_list = [exp.model_dump() for exp in getattr(parsed_data, "experience_requirements", [])]
 
         now = datetime.utcnow()
 
@@ -40,6 +41,7 @@ class JDParserService:
             existing_profile.technical_skills = tech_skills_list
             existing_profile.preferred_skills = parsed_data.preferred_skills
             existing_profile.min_experience_years = parsed_data.min_experience_years
+            existing_profile.experience_requirements = exp_reqs_list
             existing_profile.educational_requirements = parsed_data.educational_requirements
             existing_profile.key_responsibilities = parsed_data.key_responsibilities
             existing_profile.soft_skills = parsed_data.soft_skills
@@ -52,6 +54,7 @@ class JDParserService:
                 technical_skills=tech_skills_list,
                 preferred_skills=parsed_data.preferred_skills,
                 min_experience_years=parsed_data.min_experience_years,
+                experience_requirements=exp_reqs_list,
                 educational_requirements=parsed_data.educational_requirements,
                 key_responsibilities=parsed_data.key_responsibilities,
                 soft_skills=parsed_data.soft_skills,

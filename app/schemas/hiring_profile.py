@@ -10,6 +10,14 @@ class ParsedSkill(BaseModel):
     category: str = Field(description="Importance level: CRITICAL, PREFERRED, or BONUS")
 
 
+class ParsedExperienceRequirement(BaseModel):
+    """A single experience requirement extracted from the Job Description."""
+    requirement: str = Field(description="Description of experience (e.g. 'Building async backend microservices')")
+    target_role: str = Field(description="Target role or domain (e.g. 'Backend Engineer')")
+    min_years: float = Field(default=0.0, description="Minimum years of experience required for this item")
+    priority: str = Field(default="MUST_HAVE", description="Priority level: MUST_HAVE, PREFERRED, or BONUS")
+
+
 class ParsedHiringProfile(BaseModel):
     """
     Complete structured representation of a Job Description.
@@ -22,7 +30,11 @@ class ParsedHiringProfile(BaseModel):
         description="Nice-to-have skills that are not strictly required"
     )
     min_experience_years: float = Field(
-        description="Minimum years of experience required. Use 0 if not specified."
+        description="Minimum overall years of experience required. Use 0 for fresher/entry-level roles."
+    )
+    experience_requirements: list[ParsedExperienceRequirement] = Field(
+        default_factory=list,
+        description="Structured list of experience requirements categorized by priority (MUST_HAVE, PREFERRED, BONUS)"
     )
     educational_requirements: list[str] = Field(
         description="Required or preferred educational qualifications (e.g., 'B.Tech in Computer Science')"
@@ -45,6 +57,7 @@ class HiringProfileRead(BaseModel):
     technical_skills: Any
     preferred_skills: Any
     min_experience_years: float
+    experience_requirements: Any
     educational_requirements: Any
     key_responsibilities: Any
     soft_skills: Any

@@ -16,6 +16,7 @@ class HiringProfile(SQLModel, table=True):
     technical_skills: Any = Field(default_factory=list, sa_column=Column(JSON))
     preferred_skills: Any = Field(default_factory=list, sa_column=Column(JSON))
     min_experience_years: float = Field(default=0.0, nullable=False)
+    experience_requirements: Any = Field(default_factory=list, sa_column=Column(JSON))
     educational_requirements: Any = Field(default_factory=list, sa_column=Column(JSON))
     key_responsibilities: Any = Field(default_factory=list, sa_column=Column(JSON))
     soft_skills: Any = Field(default_factory=list, sa_column=Column(JSON))

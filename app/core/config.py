@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     
     # LLM Configuration
     DEFAULT_MODEL_NAME: str = "gemini-3.6-flash"
+    JD_PARSER_MODEL_NAME: str = "gemini-3.6-flash"
+    JOB_POST_GENERATOR_MODEL_NAME: str = "gemini-3.6-flash"
+    RESUME_PARSER_MODEL_NAME: str = "gemini-3.6-flash"
+    EVALUATOR_MODEL_NAME: str = "gemini-3.6-flash"
+    EVIDENCE_VERIFIER_MODEL_NAME: str = "gemini-3.6-flash"
+    CAMPAIGN_MONITOR_MODEL_NAME: str = "gemini-3.6-flash"
+    EMBEDDING_MODEL_NAME: str = "models/text-embedding-004"
+
     GOOGLE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     LLAMA_CLOUD_API_KEY: str = ""

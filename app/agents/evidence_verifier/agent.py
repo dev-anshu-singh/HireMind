@@ -4,7 +4,7 @@ Evidence Verifier Agent — Invokes Gemini to fact-check webpage metadata agains
 
 from typing import Optional
 from pydantic import BaseModel, Field
-from app.core.llm import get_llm
+from app.core.llm import get_evidence_verifier_llm
 from app.agents.evidence_verifier.prompts import evidence_verifier_prompt
 
 
@@ -39,7 +39,7 @@ async def verify_evidence_claim(
         )
 
     try:
-        llm = get_llm(model_name=model_name, temperature=0.0)
+        llm = get_evidence_verifier_llm(model_name=model_name, temperature=0.0)
         structured_llm = llm.with_structured_output(VerifiedEvidenceResult)
         chain = evidence_verifier_prompt | structured_llm
 

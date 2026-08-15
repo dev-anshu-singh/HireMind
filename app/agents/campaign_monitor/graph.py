@@ -18,7 +18,7 @@ from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.llm import get_llm
+from app.core.llm import get_campaign_monitor_llm
 from app.models.campaign import Campaign
 from app.models.candidate import Candidate
 from app.models.evaluation import CandidateEvaluation
@@ -172,7 +172,7 @@ async def node_diagnose_and_select_tool(state: MonitoringGraphState, config: Run
     m_snap = state["metrics_snapshot"]
     reqs = state["hiring_requirements"]
 
-    llm = get_llm(temperature=0.2)
+    llm = get_campaign_monitor_llm(temperature=0.2)
     structured_llm = llm.with_structured_output(MonitorAgentOutput)
     chain = campaign_monitor_prompt | structured_llm
 

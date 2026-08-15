@@ -3,7 +3,7 @@ Resume Parser Agent — Extracts structured candidate data from raw resume text 
 """
 
 from typing import Optional
-from app.core.llm import get_llm
+from app.core.llm import get_resume_parser_llm
 from app.schemas.candidate import ParsedResumeData
 from app.agents.resume_parser.prompts import resume_parser_prompt
 
@@ -17,13 +17,13 @@ async def parse_resume(
 
     Args:
         raw_resume_text: Extracted plain text string from PDF/DOCX resume.
-        model_name: Optional LLM model override.
+        model_name: Optional LLM model override (defaults to settings.RESUME_PARSER_MODEL_NAME).
 
     Returns:
         ParsedResumeData: Pydantic model containing skills, work experience, education, and links.
     """
     # 1. Obtain centralized LLM instance
-    llm = get_llm(model_name=model_name, temperature=0.1)
+    llm = get_resume_parser_llm(model_name=model_name, temperature=0.1)
 
     # 2. Force Gemini to return data matching ParsedResumeData schema
     structured_llm = llm.with_structured_output(ParsedResumeData)

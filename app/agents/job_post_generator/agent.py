@@ -3,7 +3,7 @@ Job Post Generator Agent — Formats structured hiring profile & preferences int
 """
 
 from typing import Optional, Any
-from app.core.llm import get_llm
+from app.core.llm import get_job_post_llm
 from app.schemas.job_post import GeneratedJobPost
 from app.agents.job_post_generator.prompts import job_post_prompt
 
@@ -21,13 +21,13 @@ async def generate_job_post(
         campaign_info: Dict containing basic campaign info (job_title, company_name, location, employment_type).
         hiring_profile: HiringProfile DB model or dictionary.
         recruiter_preference: RecruiterPreference DB model or dictionary (optional).
-        model_name: Optional LLM model override.
+        model_name: Optional LLM model override (defaults to settings.JOB_POST_GENERATOR_MODEL_NAME).
 
     Returns:
         GeneratedJobPost: Pydantic model with title, content_markdown, platform.
     """
     # 1. Obtain centralized LLM instance
-    llm = get_llm(model_name=model_name, temperature=0.2)
+    llm = get_job_post_llm(model_name=model_name, temperature=0.2)
 
     # 2. Force Gemini to return data matching GeneratedJobPost schema
     structured_llm = llm.with_structured_output(GeneratedJobPost)

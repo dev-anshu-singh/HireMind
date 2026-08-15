@@ -24,6 +24,8 @@ def get_llm(
         model=selected_model,
         google_api_key=settings.GOOGLE_API_KEY,
         temperature=temperature,
+        timeout=60.0,
+        max_retries=3,
     )
 
 
